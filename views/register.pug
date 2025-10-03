@@ -1,0 +1,105 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Register Page
+  body
+    h1 Register
+
+    // Form shows /adduser in action
+    form(id="registerForm" action="/adduser" enctype="multipart/form-data")
+      input(type="text" name="firstname" placeholder="First Name" required)
+      br
+      input(type="text" name="lastname" placeholder="Last Name" required)
+      br
+      input(type="file" name="profile" accept="image/png, image/jpeg, image/jpg" required)
+      br
+      input(type="text" name="email" placeholder="Email" required)
+      br
+      input(type="number" name="ph" placeholder="Phone Number" required)
+      br
+      input(type="password" name="password" placeholder="Password" required)
+      br
+      button(type="submit") Register
+
+    button(onclick="window.location.href='/login'") Go to Login
+
+    script.
+      const form = document.getElementById("registerForm");
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        const firstname = formData.get("firstname").toString().trim();
+        const lastname = formData.get("lastname").toString().trim();
+        const email = formData.get("email").toString().trim();
+        const ph = formData.get("ph").toString().trim();
+        const password = formData.get("password").toString();
+        const profile = formData.get("profile");
+
+        const nameRegex = /^[A-Za-z\s]+$/;
+        if (firstname.length < 3 || firstname.length > 30 || !nameRegex.test(firstname)) {
+          alert("Firstname must contain only letters and be 3-30 characters.");
+          return;
+        }
+        if (lastname.length < 1 || lastname.length > 20 || !nameRegex.test(lastname)) {
+          alert("Lastname must contain only letters and be 1-20 characters.");
+          return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          alert("Email is invalid.");
+          return;
+        }
+
+        if (!ph) {
+          alert("Phone number is required.");
+          return;
+        }
+
+        const passwordRegex =
+          /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])[^\s]{6,20}$/;
+        if (!passwordRegex.test(password)) {
+          alert("Password must contain 1 uppercase, 1 lowercase, 1 number, 1 special character, 6-20 characters, and no whitespace.");
+          return;
+        }
+
+        if (!profile || profile.size === 0) {
+          alert("Profile image is required.");
+          return;
+        }
+
+        const allowedTypes = ["image/png", "image/jpeg", "image/jpg"];
+        if (!allowedTypes.includes(profile.type)) {
+          alert("Profile image must be PNG, JPEG, or JPG.");
+          return;
+        }
+        if (profile.size > 3 * 1024 * 1024) {
+          alert("Profile image size must be less than 3MB.");
+          return;
+        }
+
+        try {
+          const res = await fetch("/adduser", {
+            method: "POST",
+            body: formData
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            alert(data.message || "Registration failed");
+            return;
+          }
+
+          alert("Registered successfully!");
+          window.location.href = "/login";
+        } catch (err) {
+          console.error(err);
+          alert("Registration failed");
+        }
+      });

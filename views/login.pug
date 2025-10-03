@@ -1,0 +1,48 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Login
+  body
+    h1 Login
+    form(id="loginForm")
+      input(type="text" name="email" placeholder="Email" required)
+      br
+      input(type="password" name="password" placeholder="Password" required)
+      br
+      button(type="submit") Login
+    button(type="button" onclick="window.location.href='/register'") Register
+    div(id="tokenDiv" style="margin-top:10px; color: green;")
+
+    script.
+      const form = document.getElementById("loginForm");
+      const tokenDiv = document.getElementById("tokenDiv");
+
+      form.addEventListener("submit", async e => {
+        e.preventDefault();
+        tokenDiv.innerText = "";
+        const formData = new FormData(form);
+        const data = {
+          email: formData.get("email"),
+          password: formData.get("password")
+        };
+
+        try {
+          const res = await fetch("/userLogin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+
+          const result = await res.json();
+          if (!res.ok) return alert(result.message || "Login failed");
+          localStorage.setItem("token", result.token);
+          tokenDiv.innerText = "Token: " + result.token;
+          alert("Login Successfull");
+          window.location.href = "/home";
+          
+        } catch (err) {
+          alert("Login failed");
+        }
+      });

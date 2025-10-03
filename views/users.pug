@@ -1,0 +1,83 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Users Page
+    style.
+      table, th, td {
+        border: 1px solid black;
+        padding: 8px;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      button {
+        margin: 5px;
+      }
+  body
+    h1 Users List
+    div(id="tabDiv")
+      table(id="usersTable")
+        thead
+          tr
+            th ID
+            th First Name
+            th Last Name
+            th Email
+            th Phone
+        tbody
+    div(id="btnDiv")
+    script.
+      let btnState = 1;
+      const limit = 3;
+      let totalPages = 1;
+
+      const fetchUsers = async () => {
+        try {
+          const res = await fetch(`/usersData?page=${btnState}&limit=${limit}`);
+          const data = await res.json();
+
+          if (!res.ok) {
+            alert(data.message || "Failed to fetch users");
+            return;
+          }
+
+          const users = data.users || [];
+          const totalUsers = data.totalUsers || 0;
+          totalPages = Math.ceil(totalUsers / limit);
+
+          const tbody = document.querySelector("#usersTable tbody");
+          tbody.innerHTML = "";
+
+          users.forEach(user => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td>${user.id}</td>
+              <td>${user.firstname}</td>
+              <td>${user.lastname}</td>
+              <td>${user.email}</td>
+              <td>${user.ph}</td>
+            `;
+            tbody.appendChild(row);
+          });
+
+          const btnDiv = document.getElementById("btnDiv");
+          btnDiv.innerHTML = "";
+          for (let i = 1; i <= totalPages; i++) {
+            const button = document.createElement("button");
+            button.innerText = i;
+            button.addEventListener("click", () => {
+              btnState = i;
+              fetchUsers();
+            });
+            btnDiv.appendChild(button);
+          }
+
+        } catch (err) {
+          console.error("Error fetching users:", err);
+          alert("Failed to fetch users");
+        }
+      };
+
+      fetchUsers();

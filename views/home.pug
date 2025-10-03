@@ -1,0 +1,15 @@
+html
+  head
+    title Home Page
+  body
+    h1 Home Page
+
+    button(onclick="window.location.href='/product'") Products
+    button(onclick="window.location.href='/users'") Users
+    button(onclick="logout()") Logout
+
+    script.
+      function logout() {
+        localStorage.removeItem("token");
+        window.location.href = "/login";
+      }
