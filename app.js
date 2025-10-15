@@ -7,11 +7,13 @@ const app = express();
 const PORT = process.env.PORT || 2000;
 
 app.use(cors({
-    origin: 'http://localhost:3000'
+  origin: 'http://localhost:3000'
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 app.use('/profile', express.static("files/usersProfiles"));
+app.use('/post', express.static("files/userPost"));
 
 app.set("view engine", "pug");
 app.set("views", "./views");
@@ -19,4 +21,8 @@ app.set("views", "./views");
 app.use('/api', UserRoutes);
 app.use('/', ViewRoutes);
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = app;

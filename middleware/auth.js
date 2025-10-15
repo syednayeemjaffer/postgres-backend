@@ -5,7 +5,7 @@ exports.authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.split(" ")[1];
 
   if (!token) {
-    return res.status(401).json({ message: "Token is required" });
+    return res.status(401).json({status:false ,message: "Token is required" });
   }
 
   try {
@@ -14,7 +14,7 @@ exports.authenticateToken = (req, res, next) => {
     next(); 
   } catch (err) {
     return res
-      .status(403)
-      .json({ message: "Invalid token", error: err.message });
+      .status(400)
+      .json({ status:false ,message: "Invalid token", error: err.message });
   }
 };
