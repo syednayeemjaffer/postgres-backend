@@ -7,52 +7,14 @@ const validator = require("validator");
 const fs = require("fs");
 const path = require("path");
 
-exports.uploadProfile = (req, res) => {
-  const uploadFunc = usersProfiles.single("profile");
 
-  uploadFunc(req, res, (err) => {
-    if (err) {
-      if (err.code === "LIMIT_FILE_SIZE") {
-        return res.status(400).json({
-          success: false,
-          message: "File size should be less than 3MB",
-        });
-      }
-
-      if (err.message === "Img type must be jpeg, jpg or png") {
-        return res.status(400).json({
-          success: false,
-          message: err.message,
-        });
-      }
-
-      return res.status(500).json({
-        success: false,
-        message: "Server error",
-        error: err.message,
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Profile image is required",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Profile image uploaded successfully",
-      file: req.file,
-    });
-  });
-};
 
 exports.register = async (req, res) => {
   try {
     const uploadFunc = usersProfiles.single("profile");
 
     uploadFunc(req, res, async (err) => {
+      // Handle Multer errors
       if (err) {
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({
@@ -73,6 +35,11 @@ exports.register = async (req, res) => {
         });
       }
 
+      const { email, firstname, lastname, ph, password } = req.body;
+
+      // ---------------------
+      // Validations
+      // ---------------------
       if (!req.file) {
         return res.status(400).json({
           status: false,
@@ -80,55 +47,14 @@ exports.register = async (req, res) => {
         });
       }
 
-      const { email, firstname, lastname, ph, password } = req.body;
+      if (!email) return res.status(400).json({ status: false, message: "Email is required" });
+      if (!firstname) return res.status(400).json({ status: false, message: "First name is required" });
+      if (!lastname) return res.status(400).json({ status: false, message: "Last name is required" });
+      if (!ph) return res.status(400).json({ status: false, message: "Phone is required" });
+      if (!password) return res.status(400).json({ status: false, message: "Password is required" });
 
-      if (!email) {
-        return res.status(400).json({
-          status: false,
-          message: "email is required",
-        });
-      }
-
-      if (!firstname) {
-        return res.status(400).json({
-          status: false,
-          message: "First name is required.",
-        });
-      }
-
-      if (!lastname) {
-        return res.status(400).json({
-          status: false,
-          message: "Lastname is required.",
-        });
-      }
-
-      if (!password) {
-        return res.status(400).json({
-          status: false,
-          message: "Password is required.",
-        });
-      }
-
-      if (!ph) {
-        return res.status(400).json({
-          status: false,
-          message: "Ph is required.",
-        });
-      }
-
-      if (email.length > 250) {
-        return res.status(400).json({
-          status: false,
-          message: "Email is to long.",
-        });
-      }
-      if (!validator.isEmail(email)) {
-        return res.status(400).json({
-          status: false,
-          message: "Email is invalid.",
-        });
-      }
+      if (email.length > 250) return res.status(400).json({ status: false, message: "Email is too long." });
+      if (!validator.isEmail(email)) return res.status(400).json({ status: false, message: "Email is invalid." });
 
       const passwordregex =
         /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])[^\s]{6,20}$/;
@@ -137,60 +63,48 @@ exports.register = async (req, res) => {
         return res.status(400).json({
           status: false,
           message:
-            "Password must has 1 caps letter & 1 small letter & 1 number & 1 special character & atleast 6 letters & max 20 letters & no whitespace",
+            "Password must have 1 uppercase, 1 lowercase, 1 number, 1 special character, 6-20 chars, no spaces",
         });
       }
 
       const nameregex = /^[A-Za-z]+$/;
-
-      if (
-        firstname.length < 3 ||
-        firstname.length > 30 ||
-        !nameregex.test(firstname)
-      ) {
+      if (firstname.length < 3 || firstname.length > 30 || !nameregex.test(firstname)) {
         return res.status(400).json({
           status: false,
-          message:
-            "Firstname must contain only letters and be 3-20 characters.",
+          message: "Firstname must contain only letters and be 3-30 characters.",
         });
       }
-
-      if (
-        lastname.length < 1 ||
-        lastname.length > 20 ||
-        !nameregex.test(lastname)
-      ) {
+      if (lastname.length < 1 || lastname.length > 20 || !nameregex.test(lastname)) {
         return res.status(400).json({
           status: false,
           message: "Lastname must contain only letters and be 1-20 characters.",
         });
       }
 
-      const emailResult = await pool.query(
-        "SELECT * FROM users WHERE email = $1",
-        [email]
-      );
+      // Check if email already exists
+      const emailResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
       if (emailResult.rows.length > 0) {
-        return res
-          .status(400)
-          .json({ status: false, message: "Email is already used." });
+        return res.status(400).json({ status: false, message: "Email is already used." });
       }
 
+      // ---------------------
+      // Save file to disk manually
+      // ---------------------
+      const filename = Date.now() + req.file.originalname;
+      const filePath = path.join(__dirname, "../files/usersProfiles", filename);
+
+      fs.writeFileSync(filePath, req.file.buffer);
+
+      // Hash password
       const hashPassword = await bcrypt.hash(password, 10);
 
+      // Insert user into DB
       const insertQuery = `
         INSERT INTO users (profile, email, firstname, lastname, ph, password)
         VALUES ($1, $2, $3, $4, $5, $6)
         RETURNING *;
       `;
-      const values = [
-        req.file.filename,
-        email,
-        firstname,
-        lastname,
-        ph,
-        hashPassword,
-      ];
+      const values = [filename, email, firstname, lastname, ph, hashPassword];
       const result = await pool.query(insertQuery, values);
 
       return res.status(201).json({
@@ -570,6 +484,9 @@ exports.post = async (req, res) => {
     const upload = uploadPost.array("postImgs");
 
     upload(req, res, async (err) => {
+      // ---------------------
+      // Handle Multer errors
+      // ---------------------
       if (err) {
         if (err.code === "LIMIT_FILE_SIZE") {
           return res.status(400).json({
@@ -590,6 +507,9 @@ exports.post = async (req, res) => {
         });
       }
 
+      // ---------------------
+      // Validate files exist
+      // ---------------------
       if (!req.files || req.files.length === 0) {
         return res.status(400).json({
           status: false,
@@ -599,34 +519,48 @@ exports.post = async (req, res) => {
 
       const { name, description } = req.body;
 
+      // ---------------------
+      // Validate name & description
+      // ---------------------
       if (!name || !description) {
         return res.status(400).json({
           status: false,
           message: "Name and description are required",
         });
       }
-
       if (name.length > 100 || name.length <= 1) {
         return res.status(400).json({
           status: false,
-          message: "Name length is more then 100 or it is to small",
+          message: "Name length must be between 2 and 100 characters",
         });
       }
       if (description.length > 500 || description.length <= 2) {
         return res.status(400).json({
           status: false,
-          message: "Description length is more then 500 or it is to small",
+          message: "Description length must be between 3 and 500 characters",
         });
       }
 
-      const imageFilenames = req.files.map((file) => file.filename);
+      // ---------------------
+      // Save files to disk manually
+      // ---------------------
+      const filenames = [];
+      req.files.forEach((file) => {
+        const filename = Date.now() + file.originalname;
+        const filePath = path.join(__dirname, "../files/userPost", filename);
+        fs.writeFileSync(filePath, file.buffer); // save after validation
+        filenames.push(filename);
+      });
 
+      // ---------------------
+      // Insert post into DB
+      // ---------------------
       const insertPost = `
         INSERT INTO post (userId, name, description, imgs)
         VALUES ($1, $2, $3, $4)
         RETURNING *;
       `;
-      const values = [req.user.id, name, description, imageFilenames];
+      const values = [req.user.id, name, description, filenames];
 
       const result = await pool.query(insertPost, values);
 
@@ -645,6 +579,7 @@ exports.post = async (req, res) => {
     });
   }
 };
+
 
 exports.getAllPost = async (req, res) => {
   try {

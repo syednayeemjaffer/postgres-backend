@@ -1,19 +1,13 @@
 const multer = require("multer");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "./files/usersProfiles");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + file.originalname);
-  },
-});
+
+const storage = multer.memoryStorage();
 
 const filter = (req, file, cb) => {
-  const type = ["jpeg", "png", "jpg"];
-  const ext = file.originalname.split(".")[1];
+  const allowedTypes = ["jpeg", "jpg", "png"];
+  const ext = file.originalname.split(".").pop().toLowerCase();
 
-  if (type.includes(ext)) {
+  if (allowedTypes.includes(ext)) {
     cb(null, true);
   } else {
     cb(new Error("Img type must be jpeg, jpg or png"));
@@ -21,9 +15,9 @@ const filter = (req, file, cb) => {
 };
 
 const usersProfiles = multer({
-  storage: storage,
+  storage,
   fileFilter: filter,
-  limits: { fileSize: 3 * 1024 * 1024 },
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3MB
 });
 
 module.exports = usersProfiles;

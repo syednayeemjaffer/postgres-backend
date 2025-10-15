@@ -1,16 +1,12 @@
 const multer = require("multer");
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "./files/userPost");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + file.originalname);
-  },
-});
+// ---------------------
+// Memory storage for post images
+// ---------------------
+const storage = multer.memoryStorage();
 
 const filter = (req, file, cb) => {
-  const allowedTypes = ["jpeg", "png", "jpg"];
+  const allowedTypes = ["jpeg", "jpg", "png"];
   const ext = file.originalname.split(".").pop().toLowerCase();
 
   if (allowedTypes.includes(ext)) {
@@ -20,10 +16,10 @@ const filter = (req, file, cb) => {
   }
 };
 
-const userPost = multer({
-  storage: storage,
+const uploadPost = multer({
+  storage,
   fileFilter: filter,
-  limits: { fileSize: 3 * 1024 * 1024 }, // 1MB
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3MB
 });
 
-module.exports = userPost;
+module.exports = uploadPost;

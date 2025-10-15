@@ -3,7 +3,6 @@ const {
   register,
   login,
   getAllUser,
-  uploadProfile,
   updateUser,
   post,
   getAllPost,
@@ -19,7 +18,6 @@ const router = express.Router();
 router.post("/register", register);
 router.post("/login", login);
 router.get("/users", authenticateToken, getAllUser);
-router.post("/img", authenticateToken, uploadProfile);
 router.put("/update/:id", authenticateToken, updateUser);
 router.post("/post", authenticateToken, post);
 router.get("/getPosts", authenticateToken, getAllPost);
